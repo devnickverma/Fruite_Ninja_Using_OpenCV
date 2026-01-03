@@ -15,7 +15,7 @@ from game_objects import Blade, Fruit, Bomb, SlicedFruit, Explosion, SplashEffec
 WHITE = (255, 255, 255)
 
 # Config
-WIDTH, HEIGHT = 800, 600 # Keeping larger window for menu usability
+WIDTH, HEIGHT = 960, 720 # Increased render scale
 FPS = 60
 MIN_CUT_VELOCITY = 150 # Rescaled 
 
@@ -29,19 +29,29 @@ def main():
     audio = AudioManager()
     ui = SceneManager(WIDTH, HEIGHT)
     
-    # Load Background
+    # Load Backgrounds
     try:
+        # Menu Background
         bg_raw = pygame.image.load("assets/background/game_background.jpg").convert()
         bg_img = pygame.transform.scale(bg_raw, (WIDTH, HEIGHT))
-        # Darken it
+        
+        # Gameplay Background
+        gp_raw = pygame.image.load("assets/background/Game_Playing_image.jpg").convert()
+        gameplay_bg_img = pygame.transform.scale(gp_raw, (WIDTH, HEIGHT))
+        
+        # Darken both
         dark = pygame.Surface((WIDTH, HEIGHT))
         dark.set_alpha(80) # 30% dark
         dark.fill((0, 0, 0))
+        
         bg_img.blit(dark, (0,0))
+        gameplay_bg_img.blit(dark, (0,0))
+        
     except Exception as e:
         print(f"Background load error: {e}")
         bg_img = pygame.Surface((WIDTH, HEIGHT))
         bg_img.fill((50, 50, 50))
+        gameplay_bg_img = bg_img
 
     # Game State Variables
     input_provider = None
@@ -133,24 +143,32 @@ def main():
 
         elif ui.current_scene == "GAME":
             # Check if paused
+            # Check if paused
             if ui.is_paused:
-                # Draw game state frozen
+                # Draw frozen game state (Background + Sprites)
+                screen.blit(gameplay_bg_img, (shake_x, shake_y))
+                all_sprites.draw(screen)
+                blade.draw(screen)
+                
+                # Draw live Camera PiP even when paused (so user sees themselves)
                 if hasattr(input_provider, 'get_frame'):
                     frame = input_provider.get_frame()
                     if frame is not None:
-                        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        img_rgb = np.rot90(img_rgb)
-                        surf = pygame.surfarray.make_surface(img_rgb)
-                        surf = pygame.transform.flip(surf, True, False)
-                        screen.blit(pygame.transform.scale(surf, (WIDTH, HEIGHT)), (0,0))
-                        screen.blit(bg_img, (0,0), special_flags=pygame.BLEND_MULT)
-                    else:
-                        screen.blit(bg_img, (0,0))
-                else:
-                    screen.blit(bg_img, (shake_x, shake_y))
-                
-                all_sprites.draw(screen)
-                blade.draw(screen)
+                         img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                         img_rgb = np.rot90(img_rgb)
+                         surf = pygame.surfarray.make_surface(img_rgb)
+                         surf = pygame.transform.flip(surf, True, False)
+                         
+                         pip_w = WIDTH // 4
+                         pip_aspect = surf.get_height() / surf.get_width()
+                         pip_h = int(pip_w * pip_aspect)
+                         pip_surf = pygame.transform.scale(surf, (pip_w, pip_h))
+                         
+                         pip_x = WIDTH - pip_w - 20
+                         pip_y = HEIGHT - pip_h - 20
+                         
+                         pygame.draw.rect(screen, WHITE, (pip_x - 2, pip_y - 2, pip_w + 4, pip_h + 4), 2)
+                         screen.blit(pip_surf, (pip_x, pip_y))
                 
                 # HUD
                 hud = ui.font_small.render(game_mode.get_status(), True, WHITE)
@@ -175,19 +193,36 @@ def main():
                 ix, iy, velocity, input_paused = input_provider.get_input()
                 
                 # Draw Background
+                # Draw Background (Always dominating)
+                screen.blit(gameplay_bg_img, (shake_x, shake_y))
+                
+                # Camera PiP (Picture-in-Picture)
                 if hasattr(input_provider, 'get_frame'):
                     frame = input_provider.get_frame()
                     if frame is not None:
+                        # Process frame
                         img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         img_rgb = np.rot90(img_rgb)
                         surf = pygame.surfarray.make_surface(img_rgb)
                         surf = pygame.transform.flip(surf, True, False)
-                        screen.blit(pygame.transform.scale(surf, (WIDTH, HEIGHT)), (0,0))
-                        screen.blit(bg_img, (0,0), special_flags=pygame.BLEND_MULT)
-                    else:
-                        screen.blit(bg_img, (0,0))
-                else:
-                    screen.blit(bg_img, (shake_x, shake_y))
+                        
+                        # PiP sizing (e.g., 25% of screen width)
+                        pip_w = WIDTH // 4
+                        pip_aspect = surf.get_height() / surf.get_width()
+                        pip_h = int(pip_w * pip_aspect)
+                        
+                        pip_surf = pygame.transform.scale(surf, (pip_w, pip_h))
+                        
+                        # Position: Bottom Right with padding
+                        padding = 20
+                        pip_x = WIDTH - pip_w - padding
+                        pip_y = HEIGHT - pip_h - padding
+                        
+                        # Draw Border
+                        pygame.draw.rect(screen, WHITE, (pip_x - 2, pip_y - 2, pip_w + 4, pip_h + 4), 2)
+                        
+                        # Draw PiP
+                        screen.blit(pip_surf, (pip_x, pip_y))
                 
                 # Update Logic (only if not palm-paused)
                 if not input_paused:

@@ -87,7 +87,7 @@ class Fruit(pygame.sprite.Sprite):
             
             if "small" not in path:
                 # Scale down large images to decent game size
-                self.image = pygame.transform.scale(raw_image, (70, 70))
+                self.image = pygame.transform.scale(raw_image, (85, 85))
             else:
                 self.image = raw_image
                 
@@ -150,7 +150,7 @@ class SlicedFruit(pygame.sprite.Sprite):
             if os.path.exists(path):
                  raw = pygame.image.load(path).convert_alpha()
                  if "small" not in path:
-                     self.image = pygame.transform.scale(raw, (35, 70)) # generic half size
+                     self.image = pygame.transform.scale(raw, (42, 85)) # generic half size
                  else:
                      self.image = raw
             else:
@@ -206,7 +206,7 @@ class Bomb(Fruit):
             
             self.image = pygame.image.load(path).convert_alpha()
             if "small" not in path:
-                 self.image = pygame.transform.scale(self.image, (80, 80))
+                 self.image = pygame.transform.scale(self.image, (100, 100))
             
             self.radius = self.image.get_width() // 2
         except Exception as e:

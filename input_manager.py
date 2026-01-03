@@ -66,25 +66,22 @@ class HandInput(InputProvider):
         if frame is None:
             return None, None, 0, False
             
-        # Flip for mirror effect
+        # Flip for mirror effect (standard for webcam interaction)
         frame = cv2.flip(frame, 1)
         
-        # Tracker returns raw frame coords (assuming sensors.py returns pixels)
-        # sensors.py find_position signature: (frame) -> cx, cy, velocity, is_palm_open
+        # Get actual frame dimensions for accurate scaling
+        h, w, c = frame.shape
+        
+        # Tracker returns raw frame coords
         tx, ty, velocity, is_palm_open = self.tracker.find_position(frame)
         
-        # If sensors.py returns None, tx is None
         if tx is None:
             return None, None, 0, False
             
-        # Map logic:
-        # sensors.py already returns pixel coordinates relative to the frame passed in.
-        # Since we flipped the frame, and passed it to find_position, the x,y are correct for the flipped frame.
-        # We just need to scale if window size differs from camera size
-        # Assuming 1:1 for now if we init webcam with window size
-        
-        sx = int((tx / self.cam_w) * self.width)
-        sy = int((ty / self.cam_h) * self.height)
+        # Scale to window size
+        # We use the actual frame width/height (w, h) to scale to window (self.width, self.height)
+        sx = int((tx / w) * self.width)
+        sy = int((ty / h) * self.height)
         
         return sx, sy, velocity, is_palm_open
         
